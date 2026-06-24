@@ -1,0 +1,1906 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jarvis MCLL — Dashboard com Regras ATRIX</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      color-scheme: light;
+      --bg: #eef2f7;
+      --surface: #ffffff;
+      --surface-2: #f8fbff;
+      --border: rgba(15, 23, 42, 0.08);
+      --text: #0f172a;
+      --text-muted: #475569;
+      --hint: #64748b;
+      --accent: #2563eb;
+      --accent-strong: #1d4ed8;
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --radius: 18px;
+      --radius-sm: 12px;
+      --shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme]) {
+        color-scheme: dark;
+        --bg: #0e1116;
+        --surface: #171b22;
+        --surface-2: #1e232c;
+        --border: rgba(255, 255, 255, 0.12);
+        --text: #e8eaed;
+        --text-muted: #9aa1ac;
+        --hint: #858d98;
+        --accent: #5b8cf5;
+        --accent-strong: #4a7ce0;
+        --success: #34c98a;
+        --warning: #e0a93a;
+        --danger: #ef5b5b;
+        --shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+      }
+    }
+
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0e1116;
+      --surface: #171b22;
+      --surface-2: #1e232c;
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #e8eaed;
+      --text-muted: #9aa1ac;
+      --hint: #858d98;
+      --accent: #5b8cf5;
+      --accent-strong: #4a7ce0;
+      --success: #34c98a;
+      --warning: #e0a93a;
+      --danger: #ef5b5b;
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .content-wrapper {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px 22px 40px;
+    }
+
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 24px 24px 18px;
+      margin-bottom: 18px;
+      background: var(--surface);
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 16px;
+      z-index: 10;
+    }
+
+    .header h1 {
+      font-size: clamp(1.5rem, 1.5vw, 2.1rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .header-subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      max-width: 760px;
+      line-height: 1.7;
+    }
+
+    .header-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 220px;
+      align-items: flex-end;
+    }
+
+    .pill-info {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .tabs-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding: 0 4px;
+      overflow-x: auto;
+      background: transparent;
+    }
+
+    .tab-button {
+      flex: 1 1 auto;
+      min-width: 140px;
+      padding: 12px 18px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: rgba(255, 255, 255, 0.85);
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .tab-button:hover {
+      background: #f1f5f9;
+      color: var(--accent-strong);
+    }
+
+    .tab-button.active {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 14px 38px rgba(37, 99, 235, 0.18);
+      border-color: rgba(37, 99, 235, 0.25);
+    }
+
+    .panel {
+      background: var(--surface);
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .panel h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+
+    .panel p {
+      color: var(--text-muted);
+      margin-bottom: 22px;
+    }
+
+    .panel h3 {
+      font-size: 1.05rem;
+      margin: 28px 0 14px;
+      color: var(--text);
+    }
+
+    .metric-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .metric-card {
+      background: var(--surface-2);
+      border-radius: 18px;
+      padding: 18px;
+      border: 1px solid rgba(15, 23, 42, 0.06);
+    }
+
+    .metric-label {
+      font-size: 0.78rem;
+      color: var(--hint);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-weight: 700;
+    }
+
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.05;
+    }
+
+    .metric-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .status-label {
+      color: var(--hint);
+      font-weight: 700;
+    }
+
+    .status-loaded {
+      color: var(--success);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--hint);
+      font-style: italic;
+    }
+
+    .status-ok {
+      color: var(--success);
+      background: rgba(22, 163, 74, 0.14);
+    }
+
+    .status-warning {
+      color: var(--warning);
+      background: rgba(217, 119, 6, 0.14);
+    }
+
+    .status-alert {
+      color: var(--danger);
+      background: rgba(220, 38, 38, 0.14);
+    }
+
+    .filter-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .filter-group {
+      display: grid;
+      gap: 8px;
+    }
+
+    label {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    input[type="file"],
+    select {
+      width: 100%;
+      min-height: 46px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      background: var(--surface-2);
+      color: var(--text);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="date"]:focus,
+    select:focus {
+      outline: none;
+      border-color: rgba(37, 99, 235, 0.65);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 0;
+      justify-content: flex-start;
+    }
+
+    button {
+      min-height: 46px;
+      padding: 0 18px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-weight: 700;
+      font-size: 0.95rem;
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: rgba(37, 99, 235, 0.35);
+    }
+
+    button.primary:hover {
+      background: var(--accent-strong);
+    }
+
+    button.danger {
+      background: var(--danger);
+      color: #ffffff;
+      border-color: rgba(220, 38, 38, 0.35);
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 18px;
+      border: 1px solid rgba(15, 23, 42, 0.06);
+      background: var(--surface);
+    }
+
+    table {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+      color: var(--text);
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: var(--surface);
+      padding: 14px 16px;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    }
+
+    tbody td {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+      vertical-align: middle;
+    }
+
+    tbody tr:hover {
+      background: rgba(37, 99, 235, 0.06);
+    }
+
+    tbody tr:nth-child(even) td {
+      background: rgba(15, 23, 42, 0.02);
+    }
+
+    .info-message,
+    .alert-message,
+    .success-message {
+      border-radius: 16px;
+      padding: 16px 18px;
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+    }
+
+    .info-message {
+      background: rgba(59, 130, 246, 0.12);
+      color: #1d4ed8;
+      border-left: 4px solid #2563eb;
+    }
+
+    .alert-message {
+      background: rgba(248, 113, 113, 0.12);
+      color: #991b1b;
+      border-left: 4px solid #ef4444;
+    }
+
+    .success-message {
+      background: rgba(22, 163, 74, 0.12);
+      color: #166534;
+      border-left: 4px solid #16a34a;
+    }
+
+    .data-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+      padding: 18px;
+      background: var(--surface-2);
+      border-radius: 18px;
+      margin-bottom: 20px;
+    }
+
+    .data-item-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 6px;
+    }
+
+    .data-item-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .cluster-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .cluster-btn {
+      padding: 10px 16px;
+      border: 1px solid rgba(15, 23, 42, 0.1);
+      background: var(--surface-2);
+      border-radius: 999px;
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .cluster-btn:hover {
+      background: rgba(37, 99, 235, 0.08);
+      color: var(--accent-strong);
+    }
+
+    .cluster-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: rgba(37, 99, 235, 0.5);
+    }
+
+    .chart-container {
+      position: relative;
+      height: 320px;
+      margin-bottom: 24px;
+    }
+
+    .error-msg {
+      color: #991b1b;
+      font-size: 0.92rem;
+      padding: 12px 14px;
+      background: rgba(248, 113, 113, 0.12);
+      border-radius: 14px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 992px) {
+      .content-wrapper {
+        padding: 20px 18px 32px;
+      }
+
+      .filter-row {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      }
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        position: static;
+        top: auto;
+        border-radius: 18px;
+      }
+
+      .tabs-container {
+        margin-bottom: 18px;
+      }
+
+      .tab-button {
+        min-width: 120px;
+        padding: 10px 14px;
+        font-size: 0.88rem;
+      }
+
+      .metric-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .filter-row {
+        grid-template-columns: 1fr;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+
+      .table-wrapper,
+      .chart-container {
+        border-radius: 16px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .metric-cards {
+        grid-template-columns: 1fr;
+      }
+
+      .panel {
+        padding: 20px;
+      }
+
+      .header {
+        padding: 20px 18px 16px;
+      }
+
+      .content-wrapper {
+        padding: 16px 14px 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <h1>Jarvis MCLL</h1>
+      <div class="header-subtitle">Dashboard com Regras de Análise ATRIX integradas</div>
+    </div>
+  </div>
+
+  <div class="tabs-container">
+    <button class="tab-button active" onclick="switchTab(event, 'dashboard')">Dashboard</button>
+    <button class="tab-button" onclick="switchTab(event, 'b2b-abertos')">B2B Abertos</button>
+    <button class="tab-button" onclick="switchTab(event, 'b2b-encerrados')">B2B Encerrados</button>
+    <button class="tab-button" onclick="switchTab(event, 'rede')">Rede</button>
+    <button class="tab-button" onclick="switchTab(event, 'ofs')">OFS</button>
+    <button class="tab-button" onclick="switchTab(event, 'combustivel')">Combustíveis</button>
+    <button class="tab-button" onclick="switchTab(event, 'repetidos')">Repetidos</button>
+    <button class="tab-button" onclick="switchTab(event, 'dados')">Dados</button>
+  </div>
+
+  <div class="content-wrapper">
+
+    <!-- DASHBOARD -->
+    <div id="dashboard" class="tab-content active">
+      <div class="panel">
+        <h2>Dashboard Executivo</h2>
+        <p class="panel-lead">Resumo operacional do ambiente B2B com todas as métricas integradas</p>
+
+        <div class="metric-cards">
+          <div class="metric-card">
+            <div class="metric-label">B2B Abertos</div>
+            <div class="metric-value" id="dash-abertos">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">B2B Encerrados</div>
+            <div class="metric-value" id="dash-encerrados">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Rede - Prazo</div>
+            <div class="metric-value" id="dash-rede-prazo">—</div>
+            <div class="metric-status" id="dash-rede-status"></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">OFS - Taxa</div>
+            <div class="metric-value" id="dash-ofs-taxa">—</div>
+            <div class="metric-status" id="dash-ofs-status"></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Combustível</div>
+            <div class="metric-value" id="dash-combustivel">R$ 0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Alertas</div>
+            <div class="metric-value" id="dash-alertas">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Gerenciar Bases de Dados</h2>
+        <p class="panel-lead">Carregue as bases em formato Excel para processar automaticamente com as regras ATRIX</p>
+
+        <div id="upload-messages"></div>
+
+        <div class="table-wrapper">
+          <table>
+          <thead>
+            <tr>
+              <th>Base</th>
+              <th>Descrição</th>
+              <th>Colunas Obrigatórias</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>B2B Abertos</strong></td>
+              <td>Chamados ativos</td>
+              <td>ID, Cliente, UF, Cidade, Data_Abertura, SLA_Horas, Técnico</td>
+              <td><input class="file-input" type="file" id="file-abertos" accept=".xlsx,.xls,.csv" onchange="processFile('abertos')"></td>
+            </tr>
+            <tr>
+              <td><strong>B2B Encerrados</strong></td>
+              <td>Chamados resolvidos</td>
+              <td>Protocolo, Cliente, UF, Cidade, Data_Abertura, Data_Encerramento, Causa_Raiz, SLA_Horas</td>
+              <td><input class="file-input" type="file" id="file-encerrados" accept=".xlsx,.xls,.csv" onchange="processFile('encerrados')"></td>
+            </tr>
+            <tr>
+              <td><strong>Rede (ACESSO)</strong></td>
+              <td>Performance de acesso</td>
+              <td>Cluster, Data, Qtd_Registros, Tempo_Resposta</td>
+              <td><input class="file-input" type="file" id="file-rede" accept=".xlsx,.xls,.csv" onchange="processFile('rede')"></td>
+            </tr>
+            <tr>
+              <td><strong>OFS (Cronograma)</strong></td>
+              <td>Produtividade técnicos</td>
+              <td>Técnico, Data, Tipo_Atividade, Status, UF</td>
+              <td><input class="file-input" type="file" id="file-ofs" accept=".xlsx,.xls,.csv" onchange="processFile('ofs')"></td>
+            </tr>
+            <tr>
+              <td><strong>Alelo (Combustível)</strong></td>
+              <td>Transações de combustível</td>
+              <td>Placa, Condutor, Data_Transacao, Valor, Status</td>
+              <td><input class="file-input" type="file" id="file-alelo" accept=".xlsx,.xls,.csv" onchange="processFile('alelo')"></td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+
+        <div class="button-group">
+          <button class="primary" onclick="exportData()">Exportar Dados Carregados</button>
+          <button class="danger" onclick="clearAllData()">Limpar Tudo</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Documentação de Regras</h2>
+        <p class="panel-lead">As análises utilizam as seguintes regras:</p>
+        <ul class="rule-list">
+          <li><strong>Prazo (SLA):</strong> Cálculo em horas comerciais (seg-sex, 08:00-18:00) com NETWORKDAYS.INTL</li>
+          <li><strong>Outlier:</strong> Registros com tempo > 24 horas</li>
+          <li><strong>Taxa de Conformidade:</strong> % de registros dentro do SLA (Meta ≥85%)</li>
+          <li><strong>Cluster:</strong> Determinado automaticamente por UF + Cidade</li>
+          <li><strong>MOP/EPS:</strong> Mapeamento EPS-SLN, MOP GIGA+, EPS-ADX</li>
+          <li><strong>Semana ISO:</strong> ISOWEEKNUM (ISO 8601)</li>
+          <li><strong>TME/TMR:</strong> Tempo médio de execução/resolução</li>
+          <li><strong>OFS:</strong> Exclui Almoço, Checklist, Descanso do cálculo de produtividade</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- B2B ABERTOS -->
+    <div id="b2b-abertos" class="tab-content">
+      <div class="panel">
+        <h2>Chamados em Aberto</h2>
+        <p class="panel-lead">SLA, substatus, técnicos, MOP/EPS e tabela operacional</p>
+
+        <div id="b2b-abertos-msg"></div>
+
+        <div class="filter-row">
+          <div class="filter-group">
+            <label>Mês</label>
+            <select id="filter-abertos-mes" onchange="applyFilters('abertos')">
+              <option>Todos</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Cluster</label>
+            <select id="filter-abertos-cluster" onchange="applyFilters('abertos')">
+              <option>Todos</option>
+              <option>MA CAP</option>
+              <option>MA INT</option>
+              <option>PI</option>
+              <option>NORTE</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>MOP/EPS</label>
+            <select id="filter-abertos-mop" onchange="applyFilters('abertos')">
+              <option>Todas</option>
+              <option>EPS-SLN</option>
+              <option>MOP GIGA+</option>
+              <option>EPS-ADX</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="metric-cards">
+          <div class="metric-card">
+            <div class="metric-label">Total Abertos</div>
+            <div class="metric-value" id="abertos-total">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Dentro SLA</div>
+            <div class="metric-value" id="abertos-sla">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">SLA Violado</div>
+            <div class="metric-value" id="abertos-violado">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Idade Média</div>
+            <div class="metric-value" id="abertos-idade">—</div>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Cliente</th>
+                <th>Cluster</th>
+                <th>MOP/EPS</th>
+                <th>Data Abertura</th>
+                <th>Horas Decorridas</th>
+                <th>Faixa SLA</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="abertos-table-body">
+              <tr><td colspan="8" class="empty-state">Carregue a base B2B Abertos</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- B2B ENCERRADOS -->
+    <div id="b2b-encerrados" class="tab-content">
+      <div class="panel">
+        <h2>Chamados Encerrados</h2>
+        <p class="panel-lead">Período, cluster, causa raiz, semana e indicadores históricos</p>
+
+        <div id="b2b-encerrados-msg"></div>
+
+        <div class="filter-row">
+          <div class="filter-group">
+            <label>Período (Início)</label>
+            <input type="date" id="filter-encerrados-inicio" onchange="applyFilters('encerrados')">
+          </div>
+          <div class="filter-group">
+            <label>Período (Fim)</label>
+            <input type="date" id="filter-encerrados-fim" onchange="applyFilters('encerrados')">
+          </div>
+          <div class="filter-group">
+            <label>Cluster</label>
+            <select id="filter-encerrados-cluster" onchange="applyFilters('encerrados')">
+              <option>Todos</option>
+              <option>MA CAP</option>
+              <option>MA INT</option>
+              <option>PI</option>
+              <option>NORTE</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="metric-cards">
+          <div class="metric-card">
+            <div class="metric-label">Total Encerrados</div>
+            <div class="metric-value" id="encerrados-total">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Taxa Prazo %</div>
+            <div class="metric-value" id="encerrados-prazo">—</div>
+            <div class="metric-status" id="encerrados-prazo-status"></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Taxa Outlier %</div>
+            <div class="metric-value" id="encerrados-outlier">—</div>
+            <div class="metric-status" id="encerrados-outlier-status"></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Tempo Médio</div>
+            <div class="metric-value" id="encerrados-tempo">—</div>
+          </div>
+        </div>
+
+        <h3>Tabela de Encerrados</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Protocolo</th>
+                <th>Cliente</th>
+                <th>Cluster</th>
+                <th>Tempo (h)</th>
+                <th>Faixa SLA</th>
+                <th>Prazo</th>
+                <th>Outlier</th>
+                <th>Causa Raiz</th>
+                <th>Semana</th>
+              </tr>
+            </thead>
+            <tbody id="encerrados-table-body">
+              <tr><td colspan="9" class="empty-state">Carregue a base B2B Encerrados</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Top 5 Causas Raiz</h3>
+        <div class="chart-container">
+          <canvas id="encerrados-causas-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- REDE -->
+    <div id="rede" class="tab-content">
+      <div class="panel">
+        <h2>Painel de Rede</h2>
+        <p class="panel-lead">Metas: ≥85% prazo · ≤4,9% outlier · TME ≤6,0h</p>
+
+        <div id="rede-msg"></div>
+
+        <div class="cluster-buttons">
+          <button class="cluster-btn active" onclick="filterCluster('rede', 'Todos')">Todos</button>
+          <button class="cluster-btn" onclick="filterCluster('rede', 'MA CAP')">MA CAP</button>
+          <button class="cluster-btn" onclick="filterCluster('rede', 'MA INT')">MA INT</button>
+          <button class="cluster-btn" onclick="filterCluster('rede', 'PI')">PI</button>
+          <button class="cluster-btn" onclick="filterCluster('rede', 'NORTE')">NORTE</button>
+        </div>
+
+        <div class="metric-cards">
+          <div class="metric-card">
+            <div class="metric-label">Taxa Prazo</div>
+            <div class="metric-value" id="rede-prazo">—</div>
+            <div class="metric-status" id="rede-prazo-status"></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Taxa Outlier</div>
+            <div class="metric-value" id="rede-outlier">—</div>
+            <div class="metric-status" id="rede-outlier-status"></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">TME (h)</div>
+            <div class="metric-value" id="rede-tme">—</div>
+            <div class="metric-status" id="rede-tme-status"></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">TMR (h)</div>
+            <div class="metric-value" id="rede-tmr">—</div>
+          </div>
+        </div>
+
+        <h3>Performance por Cluster</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Cluster</th>
+                <th>Qtd</th>
+                <th>Prazo %</th>
+                <th>Outlier %</th>
+                <th>TME</th>
+                <th>TMR</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="rede-table-body">
+              <tr><td colspan="7" class="empty-state">Carregue a base de Rede</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Evolução de Prazo</h3>
+        <div class="chart-container">
+          <canvas id="rede-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- OFS -->
+    <div id="ofs" class="tab-content">
+      <div class="panel">
+        <h2>Produtividade OFS</h2>
+        <p class="panel-lead">Técnicos, ordens, alertas e ranking (exclui Almoço, Checklist)</p>
+
+        <div id="ofs-msg"></div>
+
+        <div class="filter-row">
+          <div class="filter-group">
+            <label>UF</label>
+            <select id="filter-ofs-uf" onchange="applyFilters('ofs')">
+              <option>Todos</option>
+              <option>MA</option>
+              <option>PA</option>
+              <option>PI</option>
+              <option>AP</option>
+              <option>AM</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="metric-cards">
+          <div class="metric-card">
+            <div class="metric-label">Total Técnicos</div>
+            <div class="metric-value" id="ofs-total-tecnicos">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Total Atividades</div>
+            <div class="metric-value" id="ofs-total-atividades">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Taxa Média</div>
+            <div class="metric-value" id="ofs-taxa-media">—</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Alertas</div>
+            <div class="metric-value" id="ofs-alertas">0</div>
+          </div>
+        </div>
+
+        <h3>Ranking de Produtividade</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Técnico</th>
+                <th>UF</th>
+                <th>Total</th>
+                <th>Concluídas</th>
+                <th>Taxa %</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="ofs-table-body">
+              <tr><td colspan="6" class="empty-state">Carregue a base OFS</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Distribuição de Atividades</h3>
+        <div class="chart-container">
+          <canvas id="ofs-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMBUSTÍVEIS -->
+    <div id="combustivel" class="tab-content">
+      <div class="panel">
+        <h2>Consumo de Combustíveis</h2>
+        <p class="panel-lead">Saldo Alelo, frota, consumo e análise por condutor (somente transações Aprovadas)</p>
+
+        <div id="combustivel-msg"></div>
+
+        <div class="metric-cards">
+          <div class="metric-card">
+            <div class="metric-label">Saldo Alelo</div>
+            <div class="metric-value" id="combustivel-saldo">R$ 0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Total Frotas</div>
+            <div class="metric-value" id="combustivel-frotas">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Consumo Total</div>
+            <div class="metric-value" id="combustivel-consumo">R$ 0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Transações</div>
+            <div class="metric-value" id="combustivel-transacoes">0</div>
+          </div>
+        </div>
+
+        <h3>Top 10 Condutores por Consumo</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Condutor</th>
+                <th>Placa</th>
+                <th>Consumo Total</th>
+                <th>Qtd Transações</th>
+                <th>Média Transação</th>
+              </tr>
+            </thead>
+            <tbody id="combustivel-table-body">
+              <tr><td colspan="5" class="empty-state">Carregue a base Alelo</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Consumo por Tipo de Combustível</h3>
+        <div class="chart-container">
+          <canvas id="combustivel-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- REPETIDOS -->
+    <div id="repetidos" class="tab-content">
+      <div class="panel">
+        <h2>Chamados Repetidos</h2>
+        <p class="panel-lead">Clientes com reincidência, causas dominantes e evolução</p>
+
+        <div id="repetidos-msg"></div>
+
+        <div class="metric-cards">
+          <div class="metric-card">
+            <div class="metric-label">Total Repetidos</div>
+            <div class="metric-value" id="repetidos-total">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Clientes Reincidentes</div>
+            <div class="metric-value" id="repetidos-clientes">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Ofensores Nível 1</div>
+            <div class="metric-value" id="repetidos-ofensores">0</div>
+          </div>
+        </div>
+
+        <h3>Top Clientes Reincidentes</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Qtd Repetidas</th>
+                <th>Cluster</th>
+                <th>Causa Principal</th>
+              </tr>
+            </thead>
+            <tbody id="repetidos-table-body">
+              <tr><td colspan="4" class="empty-state">Carregue a base B2B Encerrados</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Causas de Repetição</h3>
+        <div class="chart-container">
+          <canvas id="repetidos-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- DADOS -->
+    <div id="dados" class="tab-content">
+      <div class="panel">
+        <h2>Central de Dados</h2>
+        <p class="panel-lead">Status das bases carregadas, validações e estatísticas</p>
+
+        <h3 class="section-title">Resumo das Bases</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Base</th>
+              <th>Status</th>
+              <th>Registros</th>
+              <th>Últimas Linhas Carregadas</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>B2B Abertos</td>
+              <td id="status-abertos"><span class="status-label">Não carregado</span></td>
+              <td id="qtd-abertos">0</td>
+              <td id="data-abertos">—</td>
+            </tr>
+            <tr>
+              <td>B2B Encerrados</td>
+              <td id="status-encerrados"><span class="status-label">Não carregado</span></td>
+              <td id="qtd-encerrados">0</td>
+              <td id="data-encerrados">—</td>
+            </tr>
+            <tr>
+              <td>Rede</td>
+              <td id="status-rede"><span class="status-label">Não carregado</span></td>
+              <td id="qtd-rede">0</td>
+              <td id="data-rede">—</td>
+            </tr>
+            <tr>
+              <td>OFS</td>
+              <td id="status-ofs"><span class="status-label">Não carregado</span></td>
+              <td id="qtd-ofs">0</td>
+              <td id="data-ofs">—</td>
+            </tr>
+            <tr>
+              <td>Alelo</td>
+              <td id="status-alelo"><span class="status-label">Não carregado</span></td>
+              <td id="qtd-alelo">0</td>
+              <td id="data-alelo">—</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 class="section-title">Referência de Cálculos</h3>
+        <div class="table-wrapper">
+          <p><strong>Taxa Prazo (SLA):</strong> % chamados com tempo ≤ SLA_Horas. Meta: ≥85%</p>
+          <p><strong>Taxa Outlier:</strong> % chamados com tempo > 24h. Meta: ≤4.9%</p>
+          <p><strong>Cluster:</strong> Determinado por (UF + Cidade) → MA CAP, MA INT, PI, NORTE</p>
+          <p><strong>MOP/EPS:</strong> EPS-SLN (MA CAP, PA CAP/INT) | MOP GIGA+ (MA INT, PI) | EPS-ADX (AP, AM, PA)</p>
+          <p><strong>Semana ISO:</strong> ISOWEEKNUM conforme padrão ISO 8601</p>
+          <p><strong>OFS Produtivo:</strong> Exclui Almoço, Checklist, Descanso</p>
+          <p><strong>Alelo Válido:</strong> Somente transações com Status = "Aprovada"</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ============= ESTRUTURA DE DADOS =============
+    let globalData = {
+      abertos: [],
+      encerrados: [],
+      rede: [],
+      ofs: [],
+      alelo: [],
+      filtros: {
+        abertos: { mes: 'Todos', cluster: 'Todos', mop: 'Todas' },
+        encerrados: { inicio: null, fim: null, cluster: 'Todos' },
+        ofs: { uf: 'Todos' },
+        rede: { cluster: 'Todos' }
+      }
+    };
+
+    let charts = {};
+
+    const DB = {_db:null,
+      open(){return new Promise((res,rej)=>{const r=indexedDB.open('atrix_jarvis',1);
+        r.onupgradeneeded=e=>{const d=e.target.result;['abertos','encerrados','repetidos','ofs','transacoes','frota','movimentos','config'].forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'k'});});};
+        r.onsuccess=e=>{this._db=e.target.result;res();};r.onerror=e=>rej(e);});},
+      get(store,k){return new Promise(res=>{try{const t=this._db.transaction(store,'readonly');const rq=t.objectStore(store).get(k);rq.onsuccess=()=>res(rq.result?rq.result.v:null);rq.onerror=()=>res(null);}catch(e){res(null);}});},
+      set(store,k,v){return new Promise(res=>{try{const t=this._db.transaction(store,'readwrite');t.objectStore(store).put({k,v});t.oncomplete=()=>res();}catch(e){res();}});},
+      del(store,k){return new Promise(res=>{try{const t=this._db.transaction(store,'readwrite');t.objectStore(store).delete(k);t.oncomplete=()=>res();}catch(e){res();}});}
+    };
+
+    function saveSession() {
+      try { localStorage.setItem('jarvis_mcll_completo', JSON.stringify(globalData)); } catch(e) {}
+    }
+
+    function adaptAbertos(rows) {
+      return (rows || []).map(r => ({
+        id: r.id || r.ID || r.ticket,
+        cliente: r.cliente || r.Cliente || '',
+        uf: (r.uf || r.UF || '').toUpperCase(),
+        cidade: r.cidade || r.Cidade || '',
+        dataAbertura: r.dataAbertura || r.abertura || r.Data_Abertura || '',
+        slahoras: r.slahoras || r.SLA_Horas || 24,
+        tecnico: r.tecnico || r.Técnico || '',
+        substatus: r.substatus || r.Substatus || '',
+        cluster: r.cluster || determineCluster(r.uf || r.UF, r.cidade || r.Cidade),
+        mopeps: r.mopeps || r.mop || determineMOPEPS(r.uf || r.UF, r.cidade || r.Cidade),
+        horasDecorridas: Number.isFinite(r.horasDecorridas) ? r.horasDecorridas : Number(r.horas || 0),
+        faixaSLA: r.faixaSLA || r.faixa || 'Não classificado',
+        statusSLA: r.statusSLA || ((r.horas || 0) <= 8 ? 'Dentro SLA' : 'Violado')
+      })).filter(r => r.id);
+    }
+
+    function adaptEncerrados(rows) {
+      return (rows || []).map(r => ({
+        protocolo: r.protocolo || r.id || r.ticket,
+        cliente: r.cliente || '',
+        uf: (r.uf || '').toUpperCase(),
+        cidade: r.cidade || '',
+        dataAbertura: r.dataAbertura || '',
+        dataEncerramento: r.dataEncerramento || '',
+        tempoResolucao: Number(r.tempoResolucao ?? r.aging ?? 0),
+        causaRaiz: r.causaRaiz || r.tipo || 'Não informado',
+        cluster: r.cluster || determineCluster(r.uf, r.cidade),
+        semana: r.semana || '',
+        dentoPrazo: r.dentoPrazo ?? (r.dentro8h ? 1 : 0),
+        outlier: r.outlier ?? (r.outlier24h ? 1 : 0)
+      })).filter(r => r.protocolo);
+    }
+
+    function adaptOFS(rows) {
+      return (rows || []).flatMap(r => {
+        if (r.tec && Number.isFinite(Number(r.total))) {
+          return [{
+            tecnico: r.tec,
+            data: '',
+            tipoAtividade: 'produtiva',
+            status: 'Consolidado',
+            uf: '',
+            grupo: r.cluster || '',
+            isProdutivo: true,
+            isConcluido: Number(r.concl || 0),
+            total: Number(r.total || 0),
+            concluido: Number(r.concl || 0)
+          }];
+        }
+        return [r];
+      });
+    }
+
+    function deriveRedeFromEncerrados(encerrados) {
+      const clusters = {};
+      (encerrados || []).forEach(r => {
+        const key = r.cluster || 'Não classificado';
+        const c = clusters[key] || (clusters[key] = {cluster:key,qtdRegistros:0,tempoResposta:0,tempoResolucao:0,dentoPrazo:0,outlier:0});
+        c.qtdRegistros++;
+        c.tempoResposta += Number(r.tempoResolucao || 0);
+        c.tempoResolucao += Number(r.tempoResolucao || 0);
+        c.dentoPrazo += r.dentoPrazo ? 1 : 0;
+        c.outlier += r.outlier ? 1 : 0;
+      });
+      return Object.values(clusters).map(c => ({
+        ...c,
+        tempoResposta: c.qtdRegistros ? c.tempoResposta / c.qtdRegistros : 0,
+        tempoResolucao: c.qtdRegistros ? c.tempoResolucao / c.qtdRegistros : 0,
+        dentoPrazo: c.qtdRegistros ? c.dentoPrazo / c.qtdRegistros : 0,
+        outlier: c.qtdRegistros ? c.outlier / c.qtdRegistros : 0
+      }));
+    }
+
+    async function loadStoredData() {
+      try {
+        const saved = JSON.parse(localStorage.getItem('jarvis_mcll_completo') || 'null');
+        if (saved) globalData = {...globalData, ...saved, filtros: globalData.filtros};
+      } catch(e) {}
+
+      await DB.open();
+      const [abertos, encerrados, ofs, transacoes] = await Promise.all([
+        DB.get('abertos','data'),
+        DB.get('encerrados','data'),
+        DB.get('ofs','data'),
+        DB.get('transacoes','data')
+      ]);
+
+      if (abertos?.length) globalData.abertos = adaptAbertos(abertos);
+      if (encerrados?.length) {
+        globalData.encerrados = adaptEncerrados(encerrados);
+        globalData.rede = deriveRedeFromEncerrados(globalData.encerrados);
+      }
+      if (ofs?.length) globalData.ofs = adaptOFS(ofs);
+      if (transacoes?.length) globalData.alelo = transacoes.map(r => ({
+        placa: r.placa,
+        condutor: r.sup,
+        valor: Number(r.val || 0),
+        tipoCombustivel: 'Alelo',
+        status: 'Aprovada',
+        isValido: true
+      }));
+
+      refreshAllViews();
+    }
+
+    function refreshAllViews() {
+      if (globalData.abertos.length) updateAbertosDashboard();
+      if (globalData.encerrados.length) {
+        updateEncerradosDashboard();
+        updateRepetidosDashboard();
+      }
+      if (globalData.rede.length) updateRedeDashboard();
+      if (globalData.ofs.length) updateOFSDashboard();
+      if (globalData.alelo.length) updateCombustivelDashboard();
+      updateDashboard();
+      updateDataSummary();
+    }
+
+    // ============= FUNÇÕES DE TAB =============
+    function switchTab(e, tabName) {
+      const contents = document.querySelectorAll('.tab-content');
+      contents.forEach(c => c.classList.remove('active'));
+
+      const buttons = document.querySelectorAll('.tab-button');
+      buttons.forEach(b => b.classList.remove('active'));
+
+      document.getElementById(tabName).classList.add('active');
+      e.target.classList.add('active');
+      window.scrollTo(0, 0);
+    }
+
+    // ============= PROCESSAMENTO DE ARQUIVO =============
+    function processFile(tipo) {
+      const fileInput = document.getElementById(`file-${tipo}`);
+      const file = fileInput.files[0];
+
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = e.target.result;
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+          processData(tipo, rows);
+          showMessage(`Base ${tipo} carregada com ${rows.length} registros!`, 'success');
+          saveSession();
+          refreshAllViews();
+        } catch(err) {
+          showMessage(`Erro ao processar ${tipo}: ${err.message}`, 'error');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // ============= PROCESSAMENTO DE DADOS COM REGRAS =============
+    function processData(tipo, rows) {
+      if (tipo === 'abertos') {
+        globalData.abertos = rows.map(r => ({
+          id: r.ID || r.id,
+          cliente: r.Cliente || r.cliente,
+          uf: (r.UF || r.uf || '').toUpperCase(),
+          cidade: r.Cidade || r.cidade,
+          dataAbertura: r.Data_Abertura || r.dataAbertura,
+          slahoras: parseFloat(r.SLA_Horas || r.slaHoras || 24),
+          tecnico: r.Técnico || r.tecnico,
+          substatus: r.Substatus || r.substatus || 'Pendente',
+          cluster: determineCluster(r.UF || r.uf, r.Cidade || r.cidade),
+          mopeps: determineMOPEPS(r.UF || r.uf, r.Cidade || r.cidade),
+          horasDecorridas: calculateHoursElapsed(r.Data_Abertura || r.dataAbertura),
+          faixaSLA: determineFaixaSLA(calculateHoursElapsed(r.Data_Abertura || r.dataAbertura), parseFloat(r.SLA_Horas || r.slaHoras || 24)),
+          statusSLA: calculateStatusSLA(calculateHoursElapsed(r.Data_Abertura || r.dataAbertura), parseFloat(r.SLA_Horas || r.slaHoras || 24))
+        }));
+        updateAbertosDashboard();
+      }
+
+      if (tipo === 'encerrados') {
+        globalData.encerrados = rows.map(r => {
+          const tempoResolucao = calculateHoursBetween(r.Data_Abertura || r.dataAbertura, r.Data_Encerramento || r.dataEncerramento);
+          const slaHoras = parseFloat(r.SLA_Horas || r.slaHoras || 24);
+          return {
+            protocolo: r.Protocolo || r.protocolo,
+            cliente: r.Cliente || r.cliente,
+            uf: (r.UF || r.uf || '').toUpperCase(),
+            cidade: r.Cidade || r.cidade,
+            dataAbertura: r.Data_Abertura || r.dataAbertura,
+            dataEncerramento: r.Data_Encerramento || r.dataEncerramento,
+            tempoResolucao: tempoResolucao,
+            causaRaiz: r.Causa_Raiz || r.causaRaiz || 'Não informado',
+            cluster: determineCluster(r.UF || r.uf, r.Cidade || r.cidade),
+            semana: getWeekISO(r.Data_Encerramento || r.dataEncerramento),
+            dentoPrazo: tempoResolucao <= slaHoras ? 1 : 0,
+            outlier: tempoResolucao > 24 ? 1 : 0
+          };
+        });
+        if (!globalData.rede.length) {
+          globalData.rede = deriveRedeFromEncerrados(globalData.encerrados);
+        }
+        updateEncerradosDashboard();
+        updateRedeDashboard();
+        updateRepetidosDashboard();
+      }
+
+      if (tipo === 'rede') {
+        globalData.rede = rows.map(r => ({
+          cluster: r.Cluster || r.cluster || 'Não classificado',
+          data: r.Data || r.data,
+          qtdRegistros: parseFloat(r.Qtd_Registros || r.qtdRegistros || 0),
+          tempoResposta: parseFloat(r.Tempo_Resposta || r.tempoResposta || 0),
+          tempoResolucao: parseFloat(r.Tempo_Resolucao || r.tempoResolucao || 0),
+          dentoPrazo: parseFloat(r.Qtd_Registros || r.qtdRegistros || 0) > 0 ? 1 : 0,
+          outlier: parseFloat(r.Tempo_Resposta || r.tempoResposta || 0) > 24 ? 1 : 0
+        }));
+        updateRedeDashboard();
+      }
+
+      if (tipo === 'ofs') {
+        globalData.ofs = rows.map(r => {
+          const tipo_atividade = (r.Tipo_Atividade || r.tipoAtividade || '').toLowerCase();
+          const isProdutivo = !['almoço', 'checklist', 'descanso', 'pause'].includes(tipo_atividade);
+          const status = r.Status || r.status || 'Pendente';
+
+          return {
+            tecnico: r.Técnico || r.tecnico,
+            data: r.Data || r.data,
+            tipoAtividade: tipo_atividade,
+            status: status,
+            uf: (r.UF || r.uf || '').toUpperCase(),
+            grupo: r.Grupo || r.grupo || 'Não informado',
+            isProdutivo: isProdutivo && status !== 'Cancelado',
+            isConcluido: status === 'Concluído' ? 1 : 0
+          };
+        });
+        updateOFSDashboard();
+      }
+
+      if (tipo === 'alelo') {
+        globalData.alelo = rows.map(r => {
+          const status = r.Status || r.status || 'Pendente';
+          const isAprovada = status === 'Aprovada';
+          return {
+            placa: r.Placa || r.placa,
+            condutor: r.Condutor || r.condutor,
+            dataTransacao: r.Data_Transacao || r.dataTransacao,
+            valor: parseFloat(r.Valor || r.valor || 0),
+            tipoCombustivel: r.Tipo_Combustivel || r.tipoCombustivel || 'Não informado',
+            status: status,
+            isValido: isAprovada
+          };
+        });
+        updateCombustivelDashboard();
+      }
+    }
+
+    // ============= FUNÇÕES DE CÁLCULO =============
+    function determineCluster(uf, cidade) {
+      uf = (uf || '').toUpperCase();
+      cidade = (cidade || '').toUpperCase();
+
+      if (uf === 'MA' && ['SÃO LUÍS', 'PAÇO DO LUMIAR', 'SÃO JOSÉ DE RIBAMAR'].includes(cidade)) return 'MA CAP';
+      if (uf === 'MA') return 'MA INT';
+      if (uf === 'PI' && cidade === 'TERESINA') return 'PI CAP';
+      if (uf === 'PI') return 'PI INT';
+      if (uf === 'PA' && ['BELÉM', 'ANANINDEUA'].includes(cidade)) return 'PA CAP';
+      if (uf === 'PA' && !['ALMEIRIM', 'SANTARÉM'].includes(cidade)) return 'PA INT';
+      if (uf === 'PA' && ['ALMEIRIM', 'SANTARÉM'].includes(cidade)) return 'NORTE';
+      if (['AP', 'AM'].includes(uf)) return 'NORTE';
+      return 'Não classificado';
+    }
+
+    function determineMOPEPS(uf, cidade) {
+      const cluster = determineCluster(uf, cidade);
+      if (['MA CAP', 'PA CAP', 'PA INT'].includes(cluster)) return 'EPS-SLN';
+      if (['MA INT', 'PI CAP', 'PI INT'].includes(cluster)) return 'MOP GIGA+';
+      if (cluster === 'NORTE') return 'EPS-ADX';
+      return 'Não classificado';
+    }
+
+    function calculateHoursElapsed(dataAbertura) {
+      if (!dataAbertura) return 0;
+      const data = new Date(dataAbertura);
+      const agora = new Date();
+      const diff = (agora - data) / (1000 * 3600);
+      return Math.max(0, diff);
+    }
+
+    function calculateHoursBetween(dataInicio, dataFim) {
+      if (!dataInicio || !dataFim) return 0;
+      const inicio = new Date(dataInicio);
+      const fim = new Date(dataFim);
+      const diff = (fim - inicio) / (1000 * 3600);
+      return Math.max(0, diff);
+    }
+
+    function determineFaixaSLA(horas, slaHoras) {
+      const percent = (horas / slaHoras) * 100;
+      if (percent <= 25) return 'Ótimo';
+      if (percent <= 50) return 'Bom';
+      if (percent <= 75) return 'Atenção';
+      if (percent <= 100) return 'Crítico';
+      return 'Violado';
+    }
+
+    function calculateStatusSLA(horas, slaHoras) {
+      return horas <= slaHoras ? 'Dentro SLA' : 'Violado';
+    }
+
+    function getWeekISO(data) {
+      if (!data) return 0;
+      const d = new Date(data);
+      const dayNum = d.getUTCDay() || 7;
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+      return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    }
+
+    // ============= DASHBOARDS =============
+    function updateAbertosDashboard() {
+      const dados = globalData.abertos;
+      const total = dados.length;
+      const dentro = dados.filter(d => d.statusSLA === 'Dentro SLA').length;
+      const violado = dados.filter(d => d.statusSLA === 'Violado').length;
+      const idadeMedia = dados.length > 0 ? (dados.reduce((a,b) => a + b.horasDecorridas, 0) / dados.length).toFixed(1) : 0;
+
+      document.getElementById('abertos-total').textContent = total;
+      document.getElementById('abertos-sla').textContent = dentro;
+      document.getElementById('abertos-violado').textContent = violado;
+      document.getElementById('abertos-idade').textContent = idadeMedia + 'h';
+
+      const tbody = document.getElementById('abertos-table-body');
+      tbody.innerHTML = dados.slice(0, 50).map(d => `
+        <tr>
+          <td>${d.id}</td>
+          <td>${d.cliente}</td>
+          <td>${d.cluster}</td>
+          <td>${d.mopeps}</td>
+          <td>${new Date(d.dataAbertura).toLocaleDateString('pt-BR')}</td>
+          <td>${d.horasDecorridas.toFixed(1)}</td>
+          <td>${d.faixaSLA}</td>
+          <td><strong class="status-label ${d.statusSLA === 'Dentro SLA' ? 'status-ok' : 'status-alert'}">${d.statusSLA}</strong></td>
+        </tr>
+      `).join('');
+    }
+
+    function updateEncerradosDashboard() {
+      const dados = globalData.encerrados;
+      const total = dados.length;
+      const dentoPrazo = dados.filter(d => d.dentoPrazo === 1).length;
+      const outliers = dados.filter(d => d.outlier === 1).length;
+      const taxaPrazo = total > 0 ? ((dentoPrazo / total) * 100).toFixed(1) : 0;
+      const taxaOutlier = total > 0 ? ((outliers / total) * 100).toFixed(1) : 0;
+      const tempoMedio = total > 0 ? (dados.reduce((a,b) => a + b.tempoResolucao, 0) / total).toFixed(1) : 0;
+
+      document.getElementById('encerrados-total').textContent = total;
+      document.getElementById('encerrados-prazo').textContent = taxaPrazo + '%';
+      document.getElementById('encerrados-prazo-status').textContent = taxaPrazo >= 85 ? '✓ OK' : '⚠ Alerta';
+      document.getElementById('encerrados-prazo-status').className = taxaPrazo >= 85 ? 'metric-status status-ok' : 'metric-status status-warning';
+      document.getElementById('encerrados-outlier').textContent = taxaOutlier + '%';
+      document.getElementById('encerrados-outlier-status').textContent = taxaOutlier <= 4.9 ? '✓ OK' : '⚠ Alerta';
+      document.getElementById('encerrados-outlier-status').className = taxaOutlier <= 4.9 ? 'metric-status status-ok' : 'metric-status status-warning';
+      document.getElementById('encerrados-tempo').textContent = tempoMedio + 'h';
+
+      const tbody = document.getElementById('encerrados-table-body');
+      tbody.innerHTML = dados.slice(0, 50).map(d => `
+        <tr>
+          <td>${d.protocolo}</td>
+          <td>${d.cliente}</td>
+          <td>${d.cluster}</td>
+          <td>${d.tempoResolucao.toFixed(1)}</td>
+          <td>${d.tempoResolucao / (24) <= 1 ? '0-24h' : '24h+'}</td>
+          <td>${d.dentoPrazo === 1 ? '✓' : '✗'}</td>
+          <td>${d.outlier === 1 ? '✓' : '✗'}</td>
+          <td>${d.causaRaiz}</td>
+          <td>Sem ${d.semana}</td>
+        </tr>
+      `).join('');
+
+      // Gráfico de causas
+      const causas = {};
+      dados.forEach(d => {
+        causas[d.causaRaiz] = (causas[d.causaRaiz] || 0) + 1;
+      });
+
+      const top5 = Object.entries(causas).sort((a,b) => b[1] - a[1]).slice(0, 5);
+      renderChart('encerrados-causas-chart', 'bar', top5.map(c => c[0]), top5.map(c => c[1]), 'Top 5 Causas Raiz');
+    }
+
+    function updateRedeDashboard() {
+      const dados = globalData.rede;
+      const totalRegistros = dados.reduce((a,b) => a + b.qtdRegistros, 0);
+      const totalDento = dados.filter(d => d.dentoPrazo === 1).reduce((a,b) => a + b.qtdRegistros, 0);
+      const totalOutlier = dados.filter(d => d.outlier === 1).reduce((a,b) => a + b.qtdRegistros, 0);
+
+      const taxaPrazo = totalRegistros > 0 ? ((totalDento / totalRegistros) * 100).toFixed(1) : 0;
+      const taxaOutlier = totalRegistros > 0 ? ((totalOutlier / totalRegistros) * 100).toFixed(1) : 0;
+      const tme = dados.length > 0 ? (dados.reduce((a,b) => a + b.tempoResposta, 0) / dados.length).toFixed(1) : 0;
+      const tmr = dados.length > 0 ? (dados.reduce((a,b) => a + b.tempoResolucao, 0) / dados.length).toFixed(1) : 0;
+
+      document.getElementById('rede-prazo').textContent = taxaPrazo + '%';
+      document.getElementById('rede-prazo-status').textContent = taxaPrazo >= 85 ? '✓ OK' : '⚠ Alerta';
+      document.getElementById('rede-prazo-status').className = taxaPrazo >= 85 ? 'metric-status status-ok' : 'metric-status status-warning';
+      document.getElementById('rede-outlier').textContent = taxaOutlier + '%';
+      document.getElementById('rede-outlier-status').textContent = taxaOutlier <= 4.9 ? '✓ OK' : '⚠ Alerta';
+      document.getElementById('rede-outlier-status').className = taxaOutlier <= 4.9 ? 'metric-status status-ok' : 'metric-status status-warning';
+      document.getElementById('rede-tme').textContent = tme + 'h';
+      document.getElementById('rede-tme-status').textContent = tme <= 6 ? '✓ OK' : '⚠ Alerta';
+      document.getElementById('rede-tme-status').className = tme <= 6 ? 'metric-status status-ok' : 'metric-status status-warning';
+      document.getElementById('rede-tmr').textContent = tmr + 'h';
+
+      const tbody = document.getElementById('rede-table-body');
+      tbody.innerHTML = dados.slice(0, 20).map(d => `
+        <tr>
+          <td>${d.cluster}</td>
+          <td>${d.qtdRegistros}</td>
+          <td>${(d.dentoPrazo * 100).toFixed(1)}</td>
+          <td>${(d.outlier * 100).toFixed(1)}</td>
+          <td>${d.tempoResposta.toFixed(1)}</td>
+          <td>${d.tempoResolucao.toFixed(1)}</td>
+          <td>${d.tempoResposta <= 6 && d.outlier <= 0.049 ? '✓ OK' : '⚠'}</td>
+        </tr>
+      `).join('');
+    }
+
+    function updateOFSDashboard() {
+      const dados = globalData.ofs;
+      const tecnicos = {};
+
+      dados.forEach(d => {
+        if (!tecnicos[d.tecnico]) {
+          tecnicos[d.tecnico] = { total: 0, concluido: 0, uf: d.uf, grupo: d.grupo };
+        }
+        if (Number.isFinite(Number(d.total))) {
+          tecnicos[d.tecnico].total += Number(d.total || 0);
+          tecnicos[d.tecnico].concluido += Number(d.concluido ?? d.isConcluido ?? 0);
+        } else if (d.isProdutivo) {
+          tecnicos[d.tecnico].total++;
+          tecnicos[d.tecnico].concluido += Number(d.isConcluido || 0);
+        }
+      });
+
+      const totais = Object.values(tecnicos);
+      const totalAtividades = totais.reduce((a,b) => a + b.total, 0);
+      const totalConcluidas = totais.reduce((a,b) => a + b.concluido, 0);
+      const taxaMedia = totalAtividades > 0 ? ((totalConcluidas / totalAtividades) * 100).toFixed(1) : 0;
+      const alertas = totais.filter(t => (t.concluido / t.total * 100) < 70).length;
+
+      document.getElementById('ofs-total-tecnicos').textContent = totais.length;
+      document.getElementById('ofs-total-atividades').textContent = totalAtividades;
+      document.getElementById('ofs-taxa-media').textContent = taxaMedia + '%';
+      document.getElementById('ofs-alertas').textContent = alertas;
+
+      const tbody = document.getElementById('ofs-table-body');
+      tbody.innerHTML = Object.entries(tecnicos).map(([tecnico, stats]) => {
+        const taxa = stats.total > 0 ? ((stats.concluido / stats.total) * 100).toFixed(1) : 0;
+        const status = taxa >= 75 ? 'OK' : taxa >= 70 ? 'Atenção' : 'Crítico';
+        return `
+          <tr>
+            <td>${tecnico}</td>
+            <td>${stats.uf}</td>
+            <td>${stats.total}</td>
+            <td>${stats.concluido}</td>
+            <td><strong>${taxa}%</strong></td>
+            <td>${status}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function updateCombustivelDashboard() {
+      const dados = globalData.alelo.filter(d => d.isValido);
+      const consumo = dados.reduce((a,b) => a + b.valor, 0);
+      const frotas = new Set(dados.map(d => d.placa)).size;
+
+      document.getElementById('combustivel-saldo').textContent = 'R$ ' + consumo.toFixed(2);
+      document.getElementById('combustivel-frotas').textContent = frotas;
+      document.getElementById('combustivel-consumo').textContent = 'R$ ' + consumo.toFixed(2);
+      document.getElementById('combustivel-transacoes').textContent = dados.length;
+
+      const condutores = {};
+      dados.forEach(d => {
+        if (!condutores[d.condutor]) {
+          condutores[d.condutor] = { total: 0, qtd: 0, placa: d.placa };
+        }
+        condutores[d.condutor].total += d.valor;
+        condutores[d.condutor].qtd++;
+      });
+
+      const top10 = Object.entries(condutores)
+        .sort((a,b) => b[1].total - a[1].total)
+        .slice(0, 10);
+
+      const tbody = document.getElementById('combustivel-table-body');
+      tbody.innerHTML = top10.map(([condutor, stats]) => `
+        <tr>
+          <td>${condutor}</td>
+          <td>${stats.placa}</td>
+          <td>R$ ${stats.total.toFixed(2)}</td>
+          <td>${stats.qtd}</td>
+          <td>R$ ${(stats.total / stats.qtd).toFixed(2)}</td>
+        </tr>
+      `).join('');
+
+      const tipos = {};
+      dados.forEach(d => {
+        tipos[d.tipoCombustivel] = (tipos[d.tipoCombustivel] || 0) + d.valor;
+      });
+      renderChart('combustivel-chart', 'doughnut', Object.keys(tipos), Object.values(tipos), 'Consumo por Tipo');
+    }
+
+    function updateDashboard() {
+      document.getElementById('dash-abertos').textContent = globalData.abertos.length;
+      document.getElementById('dash-encerrados').textContent = globalData.encerrados.length;
+
+      if (globalData.encerrados.length > 0) {
+        const taxaPrazo = globalData.encerrados.filter(d => d.dentoPrazo === 1).length / globalData.encerrados.length * 100;
+        document.getElementById('dash-rede-prazo').textContent = taxaPrazo.toFixed(1) + '%';
+        document.getElementById('dash-rede-status').textContent = taxaPrazo >= 85 ? '✓' : '⚠';
+        document.getElementById('dash-rede-status').className = taxaPrazo >= 85 ? 'metric-status status-ok' : 'metric-status status-warning';
+      }
+
+      if (globalData.ofs.length > 0) {
+        const tecnicos = {};
+        globalData.ofs.forEach(d => {
+          if (!tecnicos[d.tecnico]) tecnicos[d.tecnico] = { total: 0, concluido: 0 };
+          if (d.isProdutivo) { tecnicos[d.tecnico].total++; tecnicos[d.tecnico].concluido += d.isConcluido; }
+        });
+        const taxa = Object.values(tecnicos).length > 0 ? Object.values(tecnicos).reduce((a,b) => a + b.concluido, 0) / Object.values(tecnicos).reduce((a,b) => a + b.total, 0) * 100 : 0;
+        document.getElementById('dash-ofs-taxa').textContent = taxa.toFixed(1) + '%';
+        document.getElementById('dash-ofs-status').textContent = taxa >= 75 ? '✓' : '⚠';
+        document.getElementById('dash-ofs-status').className = taxa >= 75 ? 'metric-status status-ok' : 'metric-status status-warning';
+      }
+
+      if (globalData.alelo.length > 0) {
+        const consumo = globalData.alelo.filter(d => d.isValido).reduce((a,b) => a + b.valor, 0);
+        document.getElementById('dash-combustivel').textContent = 'R$ ' + consumo.toFixed(2);
+      }
+    }
+
+    function updateDataSummary() {
+      const now = new Date().toLocaleString('pt-BR');
+      ['abertos','encerrados','rede','ofs','alelo'].forEach(tipo => {
+        const data = globalData[tipo] || [];
+        const status = document.getElementById(`status-${tipo}`);
+        const qtd = document.getElementById(`qtd-${tipo}`);
+        const date = document.getElementById(`data-${tipo}`);
+        if (!status || !qtd || !date) return;
+        status.innerHTML = data.length ? '<span class="status-label status-loaded">Carregado</span>' : '<span class="status-label">Não carregado</span>';
+        qtd.textContent = data.length.toLocaleString('pt-BR');
+        date.textContent = data.length ? now : '—';
+      });
+    }
+
+    function updateRepetidosDashboard() {
+      const dados = globalData.encerrados || [];
+      const porCliente = {};
+      dados.forEach(d => {
+        const cliente = d.cliente || 'Não informado';
+        if (!porCliente[cliente]) porCliente[cliente] = {qtd:0,cluster:d.cluster || '-',causas:{}};
+        porCliente[cliente].qtd++;
+        porCliente[cliente].causas[d.causaRaiz || 'Não informado'] = (porCliente[cliente].causas[d.causaRaiz || 'Não informado'] || 0) + 1;
+      });
+
+      const repetidos = Object.entries(porCliente)
+        .filter(([,v]) => v.qtd > 1)
+        .sort((a,b) => b[1].qtd - a[1].qtd);
+      const causas = {};
+      repetidos.forEach(([,v]) => Object.entries(v.causas).forEach(([causa,qtd]) => causas[causa] = (causas[causa] || 0) + qtd));
+
+      document.getElementById('repetidos-total').textContent = repetidos.reduce((s,[,v]) => s + v.qtd, 0);
+      document.getElementById('repetidos-clientes').textContent = repetidos.length;
+      document.getElementById('repetidos-ofensores').textContent = repetidos.filter(([,v]) => v.qtd >= 3).length;
+
+      const tbody = document.getElementById('repetidos-table-body');
+      tbody.innerHTML = repetidos.length ? repetidos.slice(0,50).map(([cliente,v]) => {
+        const causa = Object.entries(v.causas).sort((a,b) => b[1] - a[1])[0]?.[0] || 'Não informado';
+        return `<tr><td>${cliente}</td><td>${v.qtd}</td><td>${v.cluster}</td><td>${causa}</td></tr>`;
+      }).join('') : '<tr><td colspan="4" class="empty-state">Sem clientes repetidos na base carregada</td></tr>';
+
+      const topCausas = Object.entries(causas).sort((a,b) => b[1] - a[1]).slice(0,5);
+      renderChart('repetidos-chart', 'bar', topCausas.map(c => c[0]), topCausas.map(c => c[1]), 'Causas de Repetição');
+    }
+
+    function renderChart(canvasId, type, labels, data, title) {
+      const ctx = document.getElementById(canvasId);
+      if (!ctx) return;
+
+      if (charts[canvasId]) charts[canvasId].destroy();
+
+      charts[canvasId] = new Chart(ctx, {
+        type: type,
+        data: { labels: labels, datasets: [{ label: title, data: data, backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8'] }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } }
+      });
+    }
+
+    function showMessage(msg, type) {
+      const container = document.getElementById('upload-messages');
+      const className = `${type}-message`;
+      container.innerHTML = `<div class="${className}">${msg}</div>`;
+      setTimeout(() => { container.innerHTML = ''; }, 4000);
+    }
+
+    function exportData() {
+      const ws_abertos = XLSX.utils.json_to_sheet(globalData.abertos.slice(0, 1000));
+      const ws_encerrados = XLSX.utils.json_to_sheet(globalData.encerrados.slice(0, 1000));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws_abertos, 'Abertos');
+      XLSX.utils.book_append_sheet(wb, ws_encerrados, 'Encerrados');
+      XLSX.writeFile(wb, 'jarvis_export.xlsx');
+    }
+
+    async function clearAllData() {
+      if (confirm('Tem certeza que deseja limpar todos os dados?')) {
+        globalData = { abertos: [], encerrados: [], rede: [], ofs: [], alelo: [], filtros: { abertos: {}, encerrados: {}, ofs: {}, rede: {} } };
+        document.querySelectorAll('input[type="file"]').forEach(f => f.value = '');
+        localStorage.removeItem('jarvis_mcll_completo');
+        await DB.open();
+        for (const store of ['abertos','encerrados','repetidos','ofs','transacoes','frota']) {
+          await DB.del(store,'data');
+        }
+        refreshAllViews();
+        showMessage('Todos os dados foram limpos', 'success');
+      }
+    }
+
+    function applyFilters(tipo) {}
+    function filterCluster(tipo, cluster) {
+      document.querySelectorAll('.cluster-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    // Theme Toggle Script (Redesign Integration)
+    (function () {
+      "use strict";
+      const STORAGE_KEY = "atrix-theme";
+
+      function getStoredTheme() {
+        try {
+          return localStorage.getItem(STORAGE_KEY);
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function setStoredTheme(theme) {
+        try {
+          localStorage.setItem(STORAGE_KEY, theme);
+        } catch (error) {
+          // Storage unavailable
+        }
+      }
+
+      function preferredTheme() {
+        if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+          return "dark";
+        }
+        return "light";
+      }
+
+      function applyTheme(theme, persist) {
+        const selected = theme === "dark" ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", selected);
+        if (persist) setStoredTheme(selected);
+        updateThemeButton(selected);
+      }
+
+      function initTheme() {
+        applyTheme(getStoredTheme() || preferredTheme(), false);
+
+        if (!window.matchMedia) return;
+        const media = window.matchMedia("(prefers-color-scheme: dark)");
+        const onChange = function (event) {
+          if (!getStoredTheme()) applyTheme(event.matches ? "dark" : "light", false);
+        };
+
+        if (media.addEventListener) media.addEventListener("change", onChange);
+        else if (media.addListener) media.addListener(onChange);
+      }
+
+      function updateThemeButton(theme) {
+        const btn = document.getElementById("theme-toggle-btn");
+        if (!btn) return;
+        const next = theme === "dark" ? "light" : "dark";
+        const icon = theme === "dark" ? "☀️" : "🌙";
+        btn.textContent = icon;
+        btn.setAttribute("aria-label", "Alternar para tema " + (next === "dark" ? "escuro" : "claro"));
+        btn.setAttribute("title", "Alternar tema (" + next + ")");
+      }
+
+      // Initialize theme on page load
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initTheme);
+      } else {
+        initTheme();
+      }
+
+      // Setup theme toggle button
+      document.addEventListener("DOMContentLoaded", function () {
+        const header = document.querySelector(".header");
+        if (header && !document.getElementById("theme-toggle-btn")) {
+          const btn = document.createElement("button");
+          btn.id = "theme-toggle-btn";
+          btn.style.cssText = "min-height: 36px; padding: 8px 12px; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); font-size: 16px; cursor: pointer; transition: all 0.2s ease; margin-left: 8px;";
+          btn.addEventListener("click", function () {
+            const current = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+            applyTheme(current === "dark" ? "light" : "dark", true);
+          });
+          header.appendChild(btn);
+          updateThemeButton(document.documentElement.getAttribute("data-theme") || (preferredTheme() === "dark" ? "dark" : "light"));
+        }
+      });
+    })();
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadStoredData().catch(err => showMessage(`Erro ao carregar dados salvos: ${err.message}`, 'error'));
+    });
+  </script>
+
+</body>
+</html>
