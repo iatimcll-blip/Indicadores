@@ -1319,11 +1319,19 @@
 
       if (!file) return;
 
+      const ext = (file.name || '').split('.').pop().toLowerCase();
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const data = e.target.result;
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          let workbook;
+          if (ext === 'csv' || file.type === 'text/csv') {
+            const csv = e.target.result;
+            workbook = XLSX.read(csv, { type: 'string', cellDates: true });
+          } else {
+            const data = e.target.result;
+            workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          }
+
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
@@ -1336,7 +1344,12 @@
           showMessage(`Erro ao processar ${tipo}: ${err.message}`, 'error');
         }
       };
-      reader.readAsArrayBuffer(file);
+
+      if (ext === 'csv' || file.type === 'text/csv') {
+        reader.readAsText(file, 'UTF-8');
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
     }
 
     // ============= PROCESSAMENTO DE DADOS COM REGRAS =============
