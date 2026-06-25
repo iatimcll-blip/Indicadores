@@ -1329,7 +1329,22 @@
             workbook = XLSX.read(csv, { type: 'string', cellDates: true });
           } else {
             const data = e.target.result;
-            workbook = XLSX.read(data, { type: 'array', cellDates: true });
+            try {
+              workbook = XLSX.read(data, { type: 'array', cellDates: true });
+            } catch (errArray) {
+              // fallback: convert ArrayBuffer to binary string and try again
+              try {
+                const arr = new Uint8Array(data);
+                const chunk = 10240;
+                let bstr = '';
+                for (let i = 0; i < arr.length; i += chunk) {
+                  bstr += String.fromCharCode.apply(null, arr.subarray(i, i + chunk));
+                }
+                workbook = XLSX.read(bstr, { type: 'binary', cellDates: true });
+              } catch (errBinary) {
+                throw errBinary;
+              }
+            }
           }
 
           const sheetName = workbook.SheetNames[0];
