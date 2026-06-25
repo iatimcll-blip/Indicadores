@@ -1369,40 +1369,63 @@
 
     // ============= PROCESSAMENTO DE DADOS COM REGRAS =============
     function processData(tipo, rows) {
+      // helper: normaliza chaves e escolhe o primeiro nome correspondente
+      function _normKey(s) {
+        if (s === undefined || s === null) return '';
+        try { s = String(s); } catch(e) { return ''; }
+        return s.normalize('NFD').replace(/[ -\u001f\u007f-\u009f]/g, '').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+      }
+
+      function pick(row, candidates) {
+        if (!row) return undefined;
+        // try direct access first
+        for (const c of candidates) {
+          if (Object.prototype.hasOwnProperty.call(row, c) && row[c] !== undefined && row[c] !== null && String(row[c]).trim() !== '') return row[c];
+        }
+        // fallback: normalize keys
+        const normCandidates = candidates.map(c => _normKey(c));
+        for (const k in row) {
+          const nk = _normKey(k);
+          if (normCandidates.includes(nk)) return row[k];
+        }
+        return undefined;
+      }
       if (tipo === 'abertos') {
         globalData.abertos = rows.map(r => ({
-          id: r.ID || r.id,
-          cliente: r.Cliente || r.cliente,
-          uf: (r.UF || r.uf || '').toUpperCase(),
-          cidade: r.Cidade || r.cidade,
-          dataAbertura: r.Data_Abertura || r.dataAbertura,
-          slahoras: parseFloat(r.SLA_Horas || r.slaHoras || 24),
-          tecnico: r.Técnico || r.tecnico,
-          substatus: r.Substatus || r.substatus || 'Pendente',
-          cluster: determineCluster(r.UF || r.uf, r.Cidade || r.cidade),
-          mopeps: determineMOPEPS(r.UF || r.uf, r.Cidade || r.cidade),
-          horasDecorridas: calculateHoursElapsed(r.Data_Abertura || r.dataAbertura),
-          faixaSLA: determineFaixaSLA(calculateHoursElapsed(r.Data_Abertura || r.dataAbertura), parseFloat(r.SLA_Horas || r.slaHoras || 24)),
-          statusSLA: calculateStatusSLA(calculateHoursElapsed(r.Data_Abertura || r.dataAbertura), parseFloat(r.SLA_Horas || r.slaHoras || 24))
+          id: pick(r, ['ID', 'IDTicket', 'ticket_id', 'id']),
+          cliente: pick(r, ['Cliente', 'cliente']),
+          uf: (String(pick(r, ['UF', 'uf', 'ufservico']) || '').toUpperCase()),
+          cidade: pick(r, ['Cidade', 'cidade', 'cidadeservico']),
+          dataAbertura: pick(r, ['Data_Abertura', 'dataAbertura', 'data_abertura', 'Abertura do Ticket', 'DATA_ABERTURA']),
+          slahoras: parseFloat(pick(r, ['SLA_Horas', 'slaHoras', 'sla_ticket']) || 24),
+          tecnico: pick(r, ['Técnico', 'Tecnico', 'tecnico', 'UsuarioDesignado']),
+          substatus: pick(r, ['Substatus', 'substatus']) || 'Pendente',
+          cluster: determineCluster(pick(r, ['UF', 'uf', 'ufservico']), pick(r, ['Cidade', 'cidade', 'cidadeservico'])),
+          mopeps: determineMOPEPS(pick(r, ['UF', 'uf', 'ufservico']), pick(r, ['Cidade', 'cidade', 'cidadeservico'])),
+          horasDecorridas: calculateHoursElapsed(pick(r, ['Data_Abertura', 'dataAbertura', 'data_abertura', 'Abertura do Ticket', 'DATA_ABERTURA'])),
+          faixaSLA: determineFaixaSLA(calculateHoursElapsed(pick(r, ['Data_Abertura', 'dataAbertura', 'data_abertura', 'Abertura do Ticket', 'DATA_ABERTURA'])), parseFloat(pick(r, ['SLA_Horas', 'slaHoras', 'sla_ticket']) || 24)),
+          statusSLA: calculateStatusSLA(calculateHoursElapsed(pick(r, ['Data_Abertura', 'dataAbertura', 'data_abertura', 'Abertura do Ticket', 'DATA_ABERTURA'])), parseFloat(pick(r, ['SLA_Horas', 'slaHoras', 'sla_ticket']) || 24))
         }));
         updateAbertosDashboard();
       }
 
       if (tipo === 'encerrados') {
         globalData.encerrados = rows.map(r => {
-          const tempoResolucao = calculateHoursBetween(r.Data_Abertura || r.dataAbertura, r.Data_Encerramento || r.dataEncerramento);
-          const slaHoras = parseFloat(r.SLA_Horas || r.slaHoras || 24);
+          const inicio = pick(r, ['Data_Abertura', 'dataAbertura', 'data_abertura', 'DATA_ABERTURA', 'data_abertura']);
+          const fim = pick(r, ['Data_Encerramento', 'dataEncerramento', 'data_fechamento', 'DATA_FECHAMENTO', 'data_fechamento']);
+          const tempoResolucao = calculateHoursBetween(inicio, fim);
+          const slaHoras = parseFloat(pick(r, ['SLA_Horas', 'slaHoras', 'sla_ticket']) || 24);
           return {
-            protocolo: r.Protocolo || r.protocolo,
-            cliente: r.Cliente || r.cliente,
-            uf: (r.UF || r.uf || '').toUpperCase(),
-            cidade: r.Cidade || r.cidade,
-            dataAbertura: r.Data_Abertura || r.dataAbertura,
-            dataEncerramento: r.Data_Encerramento || r.dataEncerramento,
+            protocolo: pick(r, ['Protocolo', 'protocolo', 'protocolo_bdesk', 'bdeskprotocol', 'protocolo_bdesk']),
+            cliente: pick(r, ['Cliente', 'cliente']),
+            uf: (String(pick(r, ['UF', 'uf', 'ufservico']) || '').toUpperCase()),
+            cidade: pick(r, ['Cidade', 'cidade', 'cidadeservico']),
+            dataAbertura: inicio,
+            dataEncerramento: fim,
             tempoResolucao: tempoResolucao,
-            causaRaiz: r.Causa_Raiz || r.causaRaiz || 'Não informado',
-            cluster: determineCluster(r.UF || r.uf, r.Cidade || r.cidade),
-            semana: getWeekISO(r.Data_Encerramento || r.dataEncerramento),
+            causaRaiz: pick(r, ['Causa_Raiz', 'causaRaiz', 'Causa_Raiz']) || 'Não informado',
+            cluster: determineCluster(pick(r, ['UF', 'uf', 'ufservico']), pick(r, ['Cidade', 'cidade', 'cidadeservico'])),
+            semana: getWeekISO(fim),
             dentoPrazo: tempoResolucao <= slaHoras ? 1 : 0,
             outlier: tempoResolucao > 24 ? 1 : 0
           };
@@ -1417,32 +1440,32 @@
 
       if (tipo === 'rede') {
         globalData.rede = rows.map(r => ({
-          cluster: r.Cluster || r.cluster || 'Não classificado',
-          data: r.Data || r.data,
-          qtdRegistros: parseFloat(r.Qtd_Registros || r.qtdRegistros || 0),
-          tempoResposta: parseFloat(r.Tempo_Resposta || r.tempoResposta || 0),
-          tempoResolucao: parseFloat(r.Tempo_Resolucao || r.tempoResolucao || 0),
-          dentoPrazo: parseFloat(r.Qtd_Registros || r.qtdRegistros || 0) > 0 ? 1 : 0,
-          outlier: parseFloat(r.Tempo_Resposta || r.tempoResposta || 0) > 24 ? 1 : 0
+          cluster: pick(r, ['NOME CLUSTER', 'NOVO CLUSTER', 'Cluster', 'cluster']) || 'Não classificado',
+          data: pick(r, ['DATA_ABERTURA', 'Data', 'data', 'DATAABERTURA', 'DATA_ABERTURA']),
+          qtdRegistros: parseFloat(pick(r, ['Qtd_Registros', 'qtdRegistros', 'QtdRegistros', 'qtd_registros']) || 0),
+          tempoResposta: parseFloat(pick(r, ['Tempo_Resposta', 'tempoResposta', 'TempoResposta', 'tempo_resposta']) || 0),
+          tempoResolucao: parseFloat(pick(r, ['Tempo_Resolucao', 'tempoResolucao', 'TempoResolucao', 'tempo_resolucao']) || 0),
+          dentoPrazo: parseFloat(pick(r, ['Qtd_Registros', 'qtdRegistros', 'QtdRegistros', 'qtd_registros']) || 0) > 0 ? 1 : 0,
+          outlier: parseFloat(pick(r, ['Tempo_Resposta', 'tempoResposta', 'TempoResposta', 'tempo_resposta']) || 0) > 24 ? 1 : 0
         }));
         updateRedeDashboard();
       }
 
       if (tipo === 'ofs') {
         globalData.ofs = rows.map(r => {
-          const tipo_atividade = (r.Tipo_Atividade || r.tipoAtividade || '').toLowerCase();
+          const tipo_atividade = String((pick(r, ['Tipo_Atividade', 'tipoAtividade', 'Tipo de Atividade', 'Atividade']) || '')).toLowerCase();
           const isProdutivo = !['almoço', 'checklist', 'descanso', 'pause'].includes(tipo_atividade);
-          const status = r.Status || r.status || 'Pendente';
+          const status = pick(r, ['Status', 'status', 'Status da Atividade']) || 'Pendente';
 
           return {
-            tecnico: r.Técnico || r.tecnico,
-            data: r.Data || r.data,
+            tecnico: pick(r, ['Técnico', 'Tecnico', 'tecnico', 'Recurso']),
+            data: pick(r, ['Data', 'data']),
             tipoAtividade: tipo_atividade,
             status: status,
-            uf: (r.UF || r.uf || '').toUpperCase(),
-            grupo: r.Grupo || r.grupo || 'Não informado',
+            uf: (String(pick(r, ['UF', 'uf']) || '').toUpperCase()),
+            grupo: pick(r, ['Grupo', 'grupo', 'Categoria']) || 'Não informado',
             isProdutivo: isProdutivo && status !== 'Cancelado',
-            isConcluido: status === 'Concluído' ? 1 : 0
+            isConcluido: status === 'Concluído' || status === 'Concluido' ? 1 : 0
           };
         });
         updateOFSDashboard();
@@ -1450,13 +1473,13 @@
 
       if (tipo === 'alelo') {
         globalData.alelo = rows.map(r => {
-          const status = r.Status || r.status || 'Pendente';
-          const isAprovada = status === 'Aprovada';
+          const status = pick(r, ['Status', 'status', 'Status da transa��o']) || 'Pendente';
+          const isAprovada = String(status).toLowerCase().includes('aprov');
           return {
-            placa: r.Placa || r.placa,
-            condutor: r.Condutor || r.condutor,
-            dataTransacao: r.Data_Transacao || r.dataTransacao,
-            valor: parseFloat(r.Valor || r.valor || 0),
+            placa: pick(r, ['Placa', 'placa', 'Placa do ve�culo', 'Placa do veiculo']),
+            condutor: pick(r, ['Condutor', 'condutor', 'Nome do motorista']),
+            dataTransacao: pick(r, ['Data_Transacao', 'dataTransacao', 'Data/hora da transa��o', 'Data/hora da transacao']),
+            valor: parseFloat(String(pick(r, ['Valor', 'valor', 'Valor da transa��o (R$)', 'Valor da transacao (R$)']) || 0).replace(/[.,\s]/g, function(c,i,s){ return c===','?'.':'';})) || 0,
             tipoCombustivel: r.Tipo_Combustivel || r.tipoCombustivel || 'Não informado',
             status: status,
             isValido: isAprovada
