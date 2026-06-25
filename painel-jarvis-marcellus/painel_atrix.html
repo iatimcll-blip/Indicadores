@@ -677,6 +677,7 @@
         <div class="button-group">
           <button class="primary" onclick="exportData()">Exportar Dados Carregados</button>
           <button class="danger" onclick="clearAllData()">Limpar Tudo</button>
+          <button class="primary" onclick="importRepoBases()">Importar bases do repositório</button>
         </div>
       </div>
 
@@ -1365,6 +1366,64 @@
       } else {
         reader.readAsArrayBuffer(file);
       }
+    }
+
+    // ============= IMPORTAR BASES DO REPOSITÓRIO =============
+    async function loadBaseFromUrl(tipo, url) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status} ao baixar ${url}`);
+        const ext = url.split('.').pop().toLowerCase();
+        let workbook;
+        if (ext === 'csv') {
+          const txt = await res.text();
+          workbook = XLSX.read(txt, { type: 'string', cellDates: true });
+        } else {
+          const data = await res.arrayBuffer();
+          try {
+            workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          } catch (errArray) {
+            const arr = new Uint8Array(data);
+            const chunk = 10240;
+            let bstr = '';
+            for (let i = 0; i < arr.length; i += chunk) {
+              bstr += String.fromCharCode.apply(null, arr.subarray(i, i + chunk));
+            }
+            workbook = XLSX.read(bstr, { type: 'binary', cellDates: true });
+          }
+        }
+
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+        processData(tipo, rows);
+        showMessage(`Base ${tipo} importada de ${url} com ${rows.length} registros`, 'success');
+        saveSession();
+        refreshAllViews();
+      } catch (err) {
+        showMessage(`Erro ao importar ${tipo} de ${url}: ${err.message}`, 'error');
+      }
+    }
+
+    function importRepoBases() {
+      const map = {
+        abertos: '/Jarvis_mcll/BASE ABERTOS.xlsx',
+        encerrados: '/Jarvis_mcll/BASE B2B ENCERRADOS.xlsx',
+        rede: '/Jarvis_mcll/BASE REDE (2).xlsx',
+        ofs: '/Jarvis_mcll/BASE PRODUTIVIDADE OFS.xlsx',
+        alelo: '/Jarvis_mcll/Alelo.csv'
+      };
+      const btn = document.querySelector('button[onclick="importRepoBases()"]');
+      if (btn) { btn.disabled = true; btn.dataset.orig = btn.textContent; btn.textContent = 'Importando...'; }
+
+      (async () => {
+        for (const tipo of Object.keys(map)) {
+          const url = encodeURI(map[tipo]);
+          await loadBaseFromUrl(tipo, url);
+        }
+        if (btn) { btn.disabled = false; btn.textContent = btn.dataset.orig || 'Importar bases do repositório'; }
+      })();
     }
 
     // ============= PROCESSAMENTO DE DADOS COM REGRAS =============
